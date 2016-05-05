@@ -1,0 +1,26 @@
+###################
+#                 #
+#   Service: vm   #
+#                 #
+###################
+#
+# This is an instantiable service to start and stop virtual machines
+# using the helper-script 'vmmctl'.
+#
+[Unit]
+Description=Virtual Machine %I
+Requires=libvirt-guests.service virtlogd.socket
+After=libvirt-guests.service virtlogd.socket
+
+[Service]
+Type=forking
+PIDFile=/run/libvirt/qemu/%I.pid
+ExecStart=/usr/local/sbin/vmmctl start %I
+ExecStartPost=/usr/local/sbin/vmmctl start_post %I
+ExecStop=/usr/local/sbin/vmmctl stop %I
+ExecStopPost=/usr/local/sbin/vmmctl stop_post %I
+Restart=on-success
+SuccessExitStatus=1
+
+[Install]
+WantedBy=hypervisor.target

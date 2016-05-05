@@ -1,0 +1,16 @@
+##########################
+#                        #
+#   Target: Hypervisor   #
+#                        #
+##########################
+#
+# The purpose of this target is to autostart all enabled Virtual Machines.
+# (see hypervisor.target.wants)
+#
+[Unit]
+Description=Hypervisor
+Requires=multi-user.target
+Wants=libvirtd.service
+Conflicts=rescue.service rescue.target
+After=multi-user.target rescue.service rescue.target libvirtd.service
+AllowIsolate=yes
