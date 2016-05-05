@@ -3,15 +3,19 @@
 #                                              #
 #   vmmctl - Virtual Machine Monitor Control   #
 #                                              #
+#   https://github.com/dehesselle/vmmctl       #
+#                                              #
+#                                              #
 ################################################
 #
 # This is a helper script to easily start/stop virtual machines based on
-# libvirt, using 'virsh'. It keeps track of all actions ('vmmctl.log').
+# libvirt, using 'virsh'. Some basic settings can be configured via
+# a config file ('CONFIG').
 #
 # It's designed to be used from a systemd service; specifically, the
 # 'shutdown' function is implemented as a synchronous process, waiting
 # for the VM to shut down gracefully. This is to avoid systemd killing
-# the VM (ExecStop is supposed to be blocking), risking data loss or
+# the VM ('ExecStop' is supposed to be blocking), risking data loss or
 # even corruption of the VM.
 # There is a safeguard in place, called 'GRACEFUL_SHUTDOWN_TIMEOUT', to
 # avoid deadlocking if things don't work as expected. If that timeout
@@ -20,11 +24,14 @@
 # (This is for completeness sake; systemd has its own timeouts as well.)
 #
 
-VIRSH="virsh --connect qemu:///system"
-DOMAIN_ROOT_DIR=/srv/kvm
-LOGFILE=/var/log/vmmctl.log
-GRACEFUL_SHUTDOWN_TIMEOUT=60   # VM has to come down gracefully in less
-VIRTUAL_NETWORK=virtual
+CONFIG=/usr/local/etc/vmmctl.conf
+
+if [ -f $CONFIG ]; then
+   . $CONFIG
+else
+   echo "missing file: $CONFIG"
+   exit 1
+fi
 
 shopt -s expand_aliases
 
@@ -33,11 +40,11 @@ alias log='_log "$FUNCNAME"'
 function _log
 {
    local func_name=$1
-   
+
    if [ ${#func_name} -eq 0 ]; then
       func_name=main
    fi
-   
+
    echo "$(date "+%Y%m%d-%H%M%S") $func_name: ${*:2}" >> $LOGFILE
 }
 
@@ -45,14 +52,14 @@ function create
 {
    local vm_name=$1
    local vm_domain=$DOMAIN_ROOT_DIR/$vm_name/$vm_name.xml
-   
+
    $VIRSH create $vm_domain
 }
 
 function is_running
 {
    local vm_name=$1
-   
+
    if [ $($VIRSH list | grep "running" | grep "$vm_name" | wc -l) -eq 1 ]; then
       echo true
    else
@@ -64,7 +71,7 @@ function get_ip
 {
    local vm_name=$1
    local dynamic=$2
-   
+
 #  dynamic: determine IP from dynamic DHCP leases; works only while lease is
 #           still active
 #  static:  determine IP from static DHCP leases; works only if a static lease
@@ -78,7 +85,7 @@ function get_ip
      local vm_ip=$($VIRSH net-dhcp-leases $VIRTUAL_NETWORK | grep "$vm_name" | awk '{ print $5 }')
      vm_ip=${vm_ip%/*}   # remove mask (usually "/24")
    fi
-   
+
    echo $vm_ip
 }
 
@@ -86,7 +93,7 @@ function is_up
 {
    local vm_name=$1
    local vm_up=false
-   
+
    if $(is_running $vm_name); then
       ping -c 1 $(get_ip $vm_name) 1>/dev/null 2>&1
       local ping_rc=$?
@@ -96,7 +103,7 @@ function is_up
    else
       log "$vm_name not running"
    fi
-   
+
    echo $vm_up
 }
 
@@ -105,7 +112,7 @@ function shutdown
    local vm_name=$1
    local seconds=0
    local keep_waiting=true
-   
+
    while $keep_waiting; do
       if $(is_running $vm_name); then
          if   [ $seconds -eq 0 ]; then   # first iteration: initiate shutdown
@@ -141,12 +148,12 @@ function shutdown_all
    for vm_name in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
       shutdown $vm_name &
    done
-   
+
    while [ $($VIRSH list | grep "running" | wc -l) -gt 0 ]; do
       log "waiting for VMs to shutdown"
       sleep 5
    done
-   
+
    log "end sequence"
 }
 
@@ -172,10 +179,8 @@ function exec_post
    local vm_name=$1
    local action=$2
    local exec=$DOMAIN_ROOT_DIR/$vm_name/${action}_post
-   
-   if [ -f $exec ]; then
-      $exec
-   fi
+
+   [ -f $exec ] && $exec
 }
 
 function start_post
