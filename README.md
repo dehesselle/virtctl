@@ -4,13 +4,16 @@
 
 ## Getting started
 ### Requirements
-For all of this to work you need to have
-- a common directory where all your VMs are stored (well at least the Domain XML)
+For all of this to work you need to
+- have a common directory where all your VMs are stored (well at least the Domain XML)
 - put each VM in a subdirectory below this common directory
 - name those subdirectories like the Domain XML files they contain (without the `.xml` suffix)
+- name your Domain XML files like the VMs
+
+_(The sole purpose of these requirements is to keep the scripts simple.)_
 
 #### Example
-Let's say you have two VMs, Debian and Ubuntu. Both consist of a domain XML and an (hdd-) image file and you choose `/srv/kvm` as a common directory.
+Let's say you have two VMs, `debian` and `ubuntu`. Both consist of a Domain XML and an (hdd-) image file. You choose `/srv/kvm` as a common directory.
 ```
 /srv/kvm/ubuntu/ubuntu.xml
 /srv/kvm/ubuntu/ubuntu.img
@@ -43,9 +46,9 @@ __Hint:__ These two scripts are optional - `vmmctl` checks for their presence an
 - reload systemd with `systemctl daemon-reload`
 
 ### 3...2...1...Go!
-Start your VM with `systemctl start vm@debian`.  
+Start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `vmmctl.conf`).
+
 If you want systemd to automatically start and stop it on boot/shutdown, enable it with `systemctl enable vm@debian` and change your default target with `systemctl set-default hypervisor`.
 
 ## Famous last words
-_It should work!_
-- Only one virtual network is supported at this time.
+_It should work!_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the (mostly naming related) requirements above. That's where this solution falls short.
