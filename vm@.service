@@ -1,8 +1,10 @@
-###################
-#                 #
-#   Service: vm   #
-#                 #
-###################
+############################################
+#                                          #
+#   Service: vm                            #
+#                                          #
+#   https://github.com/dehesselle/vmmctl   #
+#                                          #
+############################################
 #
 # This is an instantiable service to start and stop virtual machines
 # using the helper-script 'vmmctl'.
@@ -24,3 +26,4 @@ SuccessExitStatus=1
 
 [Install]
 WantedBy=hypervisor.target
+
