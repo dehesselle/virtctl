@@ -1,18 +1,33 @@
 #!/bin/bash
-
+##################################################
+#                                                #
+#   start_post - post-start actions for vmmctl   #
+#                                                #
+#   https://github.com/dehesselle/vmmctl         #
+#                                                #
+##################################################
+#
+# This script handles the post-start actions for vmmctl.
+#
 MYSELF_DIR=$(dirname $(readlink -f $0))
+VM_NAME=$(basename $MYSELF_DIR)
+DOMAIN=$MYSELF_DIR/$VM_NAME.xml
 
-DOMAIN=$MYSELF_DIR/kvm*.xml
-
-if [ -f $DOMAIN ]; then
-   VM_NAME=$(basename $DOMAIN .xml)
-else
+if [ ! -f $DOMAIN ]; then
    echo "error determining domain"
    exit 1
 fi
 
-GUEST_IPADDR=$(vmmctl get_ip $VM_NAME)
+function add_port_forwarding
+{
+   local host_port=$1
+   local guest_port=$2
+   local guest_ip=$(vmmctl get_ip $VM_NAME)
 
-# ssh
-iptables -t nat -A PREROUTING -p tcp --dport "31022" -j DNAT --to "$GUEST_IPADDR:22"
-iptables -I FORWARD -d "$GUEST_IPADDR/32" -p tcp -m state --state NEW -m tcp --dport "22" -j ACCEPT
+   iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
+   iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+}
+
+# uncomment this to make guest's ssh available on your host:10022
+#add_port_forwarding 10022 22   # forward ssh (host:10022 to guest:22)
+
