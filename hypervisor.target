@@ -1,8 +1,10 @@
-##########################
-#                        #
-#   Target: Hypervisor   #
-#                        #
-##########################
+############################################
+#                                          #
+#   Target: Hypervisor                     #
+#                                          #
+#   https://github.com/dehesselle/vmmctl   #
+#                                          #
+############################################
 #
 # The purpose of this target is to autostart all enabled Virtual Machines.
 # (see hypervisor.target.wants)
@@ -14,3 +16,4 @@ Wants=libvirtd.service
 Conflicts=rescue.service rescue.target
 After=multi-user.target rescue.service rescue.target libvirtd.service
 AllowIsolate=yes
+
