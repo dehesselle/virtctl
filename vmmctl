@@ -100,7 +100,7 @@ function is_up
          vm_up=true
       fi
    else
-      log "$vm_name not running"
+      log "[$vm_name] not running"
    fi
 
    echo $vm_up
@@ -120,10 +120,10 @@ function shutdown
          elif [ $((seconds%20)) -eq 0 ]; then   # request shutdown every 20 sec
 #           for VMs that need more "persuasion" to shutdown
 #           (I'm looking at you, Windows!)
-            log "$seconds seconds passed, requesting shutdown again"
+            log "[$vm_name] $seconds seconds passed, requesting shutdown again"
             $VIRSH shutdown $vm_name
          elif [ $seconds -ge $GRACEFUL_SHUTDOWN_TIMEOUT ]; then   # give up
-            log "$seconds seconds passed, giving up"
+            log "[$vm_name] $seconds seconds passed, giving up"
             keep_waiting=false
          fi
          sleep 1
