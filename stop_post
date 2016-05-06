@@ -29,5 +29,10 @@ function del_port_forwarding
 }
 
 # uncomment this to delete guest's ssh forwarding to your host:10022
-#del_port_forwarding 10022 22   # delete forwarding ssh (host:10022 to guest:22)
+#del_port_forwarding 10022 22     # delete forwarding ssh (host:10022 to guest:22)
 
+# uncomment this to delete guest's http forwarding to your host:10080
+#del_port_forwarding 10080 80     # delete forwarding http (host:10080 to guest:80)
+
+# uncomment this to delete guest's rdp forwarding to your host:13389
+#del_port_forwarding 13389 3389   # delete forwarding rdp (host:13389 to guest:3389)

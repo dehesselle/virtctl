@@ -29,5 +29,10 @@ function add_port_forwarding
 }
 
 # uncomment this to make guest's ssh available on your host:10022
-#add_port_forwarding 10022 22   # forward ssh (host:10022 to guest:22)
+#add_port_forwarding 10022 22     # forward ssh (host:10022 to guest:22)
 
+# uncomment this to make guest's http available on your host:10080
+#add_port_forwarding 10080 80     # forward http (host:10080 to guest:80)
+
+# uncomment this to make guest's rdp available on your host:13389
+#add_port_forwarding 13389 3389   # forward rdp (host:13389 to guest:3389)
