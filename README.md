@@ -9,8 +9,9 @@ For all of this to work you need to
 - put each VM in a subdirectory below this common directory
 - name those subdirectories like the Domain XML files they contain (without the `.xml` suffix)
 - name your Domain XML files like the VMs
+- not have to deal with multiple virtual and/or physical networks
 
-_(The sole purpose of these requirements is to keep the scripts simple.)_
+_(The sole purpose of these requirements is to keep the scripts simple since my setup is simple.)_
 
 #### Example
 Let's say you have two VMs, `debian` and `ubuntu`. Both consist of a Domain XML and an (hdd-) image file. You choose `/srv/kvm` as a common directory.
@@ -46,9 +47,11 @@ __Hint:__ These two scripts are optional - `vmmctl` checks for their presence an
 - reload systemd with `systemctl daemon-reload`
 
 ### 3...2...1...Go!
-Start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `vmmctl.conf`).
+Start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `vmmctl.conf`, default is `/var/log/vmmctl.log`).
 
 If you want systemd to automatically start and stop it on boot/shutdown, enable it with `systemctl enable vm@debian` and change your default target with `systemctl set-default hypervisor`.
 
 ## Famous last words
-_It should work!_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the (mostly naming related) requirements above. That's where this solution falls short.
+_It should work!_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the naming-related requirements above. But that is where this solution falls short.  
+
+I want to lift some of the limitations by parsing the Domain XML, but no promises yet.
