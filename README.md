@@ -4,23 +4,25 @@
 
 ## Getting started
 ### Requirements
-For all of this to work you need to
-- have a common directory where all your VMs are stored (well at least the Domain XML)
-- put each VM in a subdirectory below this common directory
-- name those subdirectories like the Domain XML files they contain (without the `.xml` suffix)
-- name your Domain XML files like the VMs
-- not have to deal with multiple virtual and/or physical networks
+The sole purpose of these requirements is to keep the scripts simple (i.e. they can easily guess path- and filenames).
+#### folder structure and naming
+- Make sure that your domain XML files are named exactly like the VMs themselves.
+- Choose a common root directory. All domain XML files will be put in subdirectories below this root directory.
+- Create subdirectories below the common root directory, one for each VM. Name them like you named your VMs.
+- Place each VM's domain XML into one of those subdirectories.
 
-_(The sole purpose of these requirements is to keep the scripts simple since my setup is simple.)_
+Sounds confusing? Well, that's only me not being able to get it across. Take a look at the example below.
 
-#### Example
-Let's say you have two VMs, `debian` and `ubuntu`. Both consist of a Domain XML and an (hdd-) image file. You choose `/srv/kvm` as a common directory.
+##### Example
+Let's say you have two VMs, `debian` and `ubuntu`. Both consist of a Domain XML and an (hdd-) image file. You choose `/srv/kvm` as a common directory. According to the requirements above, you'll end up with the following file- and foldernames.
 ```
 /srv/kvm/ubuntu/ubuntu.xml
 /srv/kvm/ubuntu/ubuntu.img
 /srv/kvm/debian/debian.xml
 /srv/kvm/debian/debian.img
 ```
+### Limitations
+- Multiple physical and/or virtual network adapters aren't supported. This also implies that only one virtual network is supported.
 
 ### Basic layout
 Copy the files from the git repository into the locations as shown below.
@@ -39,19 +41,21 @@ According to the example above.
 /srv/kvm/ubuntu/post_start
 /srv/kvm/ubuntu/post_stop
 ```
-__Hint:__ These two scripts are optional - `vmmctl` checks for their presence and will do just fine without them.
+__Hint:__ These two scripts (per VM) are optional - [vmmctl](https://github.com/dehesselle/vmmctl) checks for their presence and will do just fine without them.
 ### Configuration
-- change the parameter `DOMAIN_ROOT_DIR` in `vmmctl.conf` according to the name of your common directory
-- change the parameter `VIRTUAL_NETWORK` to the name of your virtual network
+- Change the parameter `DOMAIN_ROOT_DIR` in `vmmctl.conf` according to the name of your common root directory.
+- Change the parameter `VIRTUAL_NETWORK` to the name of your virtual network.
 - The `post_start` and `post_stop` scripts won't do anything in their default state, everything has been commented out. They are already prepared to handle port forwarding but you're encouraged to put any start/stop task in there that you require.
-- reload systemd with `systemctl daemon-reload`
+- Reload systemd's configuration with `systemctl daemon-reload`
 
 ### 3...2...1...Go!
-Start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `vmmctl.conf`, default is `/var/log/vmmctl.log`).
+Accoring to the example above: start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `vmmctl.conf`, default is `/var/log/vmmctl.log`).
 
 If you want systemd to automatically start and stop it on boot/shutdown, enable it with `systemctl enable vm@debian` and change your default target with `systemctl set-default hypervisor`.
 
 ## Famous last words
-_It should work!_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the naming-related requirements above. But that is where this solution falls short.  
+_It should work!_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the naming-related requirements above. On the other hand, if you have a more complex setup, that is where this solution falls short.  
 
-I want to lift some of the limitations by parsing the Domain XML, but no promises yet.
+### Todos
+- get virtual network name from XML
+- provide a hook script (see [libvirt wiki]( http://wiki.libvirt.org/page/Networking/#Forwarding_Incoming_Connections))
