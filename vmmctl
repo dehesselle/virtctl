@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 ################################################
 #                                              #
 #   vmmctl - Virtual Machine Monitor Control   #
@@ -47,91 +47,132 @@ function _log
    echo "$(date "+%Y%m%d-%H%M%S") $func_name: ${*:2}" >> $LOGFILE
 }
 
-function create
+function prepare
 {
-   local vm_name=$1
-   local vm_domain=$DOMAIN_ROOT_DIR/$vm_name/$vm_name.xml
+   local command=$1
+   local domain=$2
 
-   $VIRSH create $vm_domain
+   local id=$(get_id $domain)
+
+   if [ ${#id} -gt 0 ]; then
+      local domain_xml=$BASE_DIR/$PREFIX/$id/$domain.xml
+
+      if [ -f $domain_xml ]; then
+         $command $domain $domain_xml
+         local rc=$?
+
+         if [ $rc -ne 0 ]; then
+            log "returncode $rc"
+         fi
+      else
+         log "domain XML not found: $domain_xml"
+      fi
+   else
+      log "unable to identify ID: $domain"
+   fi
+}
+
+function start   # called by 'prepare'
+{
+   local domain=$1   # unused
+   local domain_xml=$2
+
+   $VIRSH create $domain_xml
+   return $?
 }
 
 function is_running
 {
-   local vm_name=$1
+   local domain=$1
 
-   if [ $($VIRSH list | grep "running" | grep "$vm_name" | wc -l) -eq 1 ]; then
-      echo true
+   local is_running=false
+
+   if [ $($VIRSH list | grep "running" | grep "$domain" | wc -l) -eq 1 ]; then
+      is_running=true
+   fi
+
+   echo $is_running
+}
+
+function get_id
+{
+   local domain=$1
+
+   if [[ "$domain" =~ $PREFIX($ID_REGEX) ]]; then
+      echo ${BASH_REMATCH[1]}
    else
-      echo false
+      echo ""
    fi
 }
 
 function get_ip
 {
-   local vm_name=$1
-   local dynamic=$2
+   local domain=$1
 
+   local dynamic=true   # dynamic/static is unused functionality
 #  dynamic: determine IP from dynamic DHCP leases; works only while lease is
 #           still active
 #  static:  determine IP from static DHCP leases; works only if a static lease
 #           has been defined
    if [ ${#dynamic} -eq 0 ]; then
-     local vm_ip=$($VIRSH net-dumpxml $VIRTUAL_NETWORK | grep "$vm_name")
-     if [[ "$vm_ip" =~ ip=\'([^\']+)\' ]]; then
-        vm_ip=${BASH_REMATCH[1]}
+     local domain_ip=$($VIRSH net-dumpxml $VIRTUAL_NETWORK | grep "$domain")
+     if [[ "$domain_ip" =~ ip=\'([^\']+)\' ]]; then   # ' <- fix syntax highlighting
+        domain_ip=${BASH_REMATCH[1]}
      fi
    else
-     local vm_ip=$($VIRSH net-dhcp-leases $VIRTUAL_NETWORK | grep "$vm_name" | awk '{ print $5 }')
-     vm_ip=${vm_ip%/*}   # remove mask (usually "/24")
+     local domain_ip=$($VIRSH net-dhcp-leases $VIRTUAL_NETWORK | grep "$domain" | awk '{ print $5 }')
+     domain_ip=${domain_ip%/*}   # remove mask (usually "/24")
    fi
 
-   echo $vm_ip
+   echo $domain_ip
 }
 
 function is_up
 {
-   local vm_name=$1
-   local vm_up=false
+   local domain=$1
+   local is_up=false
 
-   if $(is_running $vm_name); then
-      ping -c 1 $(get_ip $vm_name) 1>/dev/null 2>&1
+   if $(is_running $domain); then
+      ping -c 1 $(get_ip $domain) 1>/dev/null 2>&1
       local ping_rc=$?
       if [ $ping_rc -eq 0 ]; then
-         vm_up=true
+         is_up=true
       fi
    else
-      log "[$vm_name] not running"
+      log "[$domain] not running"
    fi
 
-   echo $vm_up
+   echo $is_up
 }
 
-function shutdown
+function stop   # called by 'prepare'
 {
-   local vm_name=$1
+   local domain=$1
+   local domain_xml=$2   # unused
+
    local seconds=0
    local keep_waiting=true
 
    while $keep_waiting; do
-      if $(is_running $vm_name); then
+      if $(is_running $domain); then
          if   [ $seconds -eq 0 ]; then   # first iteration: initiate shutdown
-            log "[$vm_name] requesting shutdown"
-            $VIRSH shutdown $vm_name
+            log "[$domain] requesting shutdown"
+            $VIRSH shutdown $domain
          elif [ $((seconds%20)) -eq 0 ]; then   # request shutdown every 20 sec
 #           for VMs that need more "persuasion" to shutdown
 #           (I'm looking at you, Windows!)
-            log "[$vm_name] $seconds seconds passed, requesting shutdown again"
-            $VIRSH shutdown $vm_name
+            log "[$domain] $seconds seconds passed, requesting shutdown again"
+            $VIRSH shutdown $domain
          elif [ $seconds -ge $GRACEFUL_SHUTDOWN_TIMEOUT ]; then   # give up
-            log "[$vm_name] $seconds seconds passed, giving up"
+            log "[$domain] $seconds seconds passed, giving up"
             keep_waiting=false
          fi
          sleep 1
       else
          if [ $seconds -eq 0 ]; then
-            log "[$vm_name] was already down"
+            log "[$domain] was already down"
          else
-            log "[$vm_name] is now down"
+            log "[$domain] is now down"
          fi
          keep_waiting=false
       fi
@@ -144,8 +185,8 @@ function shutdown_all
 {
    log "begin sequence"
 
-   for vm_name in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
-      shutdown $vm_name &
+   for domain in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
+      shutdown $domain &
    done
 
    while [ $($VIRSH list | grep "running" | wc -l) -gt 0 ]; do
@@ -156,43 +197,60 @@ function shutdown_all
    log "end sequence"
 }
 
-function start
-{
-   create $*
-}
-
-function stop
-{
-   shutdown $*
-}
-
 function status
 {
-   for vm_name in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
-      log "[$vm_name] is running"
+   for domain in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
+      log "[$domain] is running"
    done
 }
 
 function exec_post
 {
-   local vm_name=$1
-   local action=$2
-   local exec=$DOMAIN_ROOT_DIR/$vm_name/${action}_post
+   local domain_xml=$1
+   local command=$2
 
-   [ -f $exec ] && $exec
+   local exec=$(dirname $domain_xml)/${command}_post
+
+   [ -f "$exec" ] && source $exec
 }
 
-function start_post
+function start_post   # called by 'prepare'
 {
-   local vm_name=$1
-   exec_post $vm_name start
+   local domain=$1   # unused
+   local domain_xml=$2
+
+   exec_post $domain_xml start
 }
 
-function stop_post
+function stop_post   # called by 'prepare'
 {
-   local vm_name=$1
-   exec_post $vm_name stop
+   local domain=$1   # unused
+   local domain_xml=$2
+
+   exec_post $domain_xml stop
+}
+
+function port_forwarding_add   # uses functions/variables from the environment
+{
+   local host_port=$1
+   local guest_port=$2
+
+   local guest_ip=$(get_ip $domain)
+
+   iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
+   iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+}
+
+function port_forwarding_del   # uses functions/variables from the environment
+{
+   local host_port=$1
+   local guest_port=$2
+   local guest_ip=$(get_ip $domain)
+
+   iptables -t nat -D PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
+   iptables -D FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
 }
 
 log "$0 $*"
-$*
+prepare $*
+

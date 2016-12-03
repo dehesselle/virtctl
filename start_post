@@ -1,38 +1,17 @@
-#!/bin/bash
 ##################################################
 #                                                #
 #   start_post - post-start actions for vmmctl   #
+#               (sourced by vmmctl)              #
 #                                                #
 #   https://github.com/dehesselle/vmmctl         #
 #                                                #
 ##################################################
-#
-# This script handles the post-start actions for vmmctl.
-#
-MYSELF_DIR=$(dirname $(readlink -f $0))
-VM_NAME=$(basename $MYSELF_DIR)
-DOMAIN=$MYSELF_DIR/$VM_NAME.xml
 
-if [ ! -f $DOMAIN ]; then
-   echo "error determining domain"
-   exit 1
-fi
+# uncomment to forward host:10022 to guest:22
+#port_forwarding_add 10022 22     # forward ssh (host:10022 to guest:22)
 
-function add_port_forwarding
-{
-   local host_port=$1
-   local guest_port=$2
-   local guest_ip=$(vmmctl get_ip $VM_NAME)
+# uncomment to forward host:10080 to guest:80
+#port_forwarding_add 10080 80     # forward http (host:10080 to guest:80)
 
-   iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
-   iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
-}
-
-# uncomment this to make guest's ssh available on your host:10022
-#add_port_forwarding 10022 22     # forward ssh (host:10022 to guest:22)
-
-# uncomment this to make guest's http available on your host:10080
-#add_port_forwarding 10080 80     # forward http (host:10080 to guest:80)
-
-# uncomment this to make guest's rdp available on your host:13389
-#add_port_forwarding 13389 3389   # forward rdp (host:13389 to guest:3389)
+# uncomment to forward host:13389 to guest:3389
+#port_forwarding_add 13389 3389   # forward rdp (host:13389 to guest:3389)
