@@ -10,17 +10,17 @@
 # using the helper-script 'vmmctl'.
 #
 [Unit]
-Description=Virtual Machine %I
+Description=Virtual Machine %i
 Requires=libvirt-guests.service virtlogd.socket
 After=libvirt-guests.service virtlogd.socket
 
 [Service]
 Type=forking
-PIDFile=/run/libvirt/qemu/%I.pid
-ExecStart=/usr/local/sbin/vmmctl start %I
-ExecStartPost=/usr/local/sbin/vmmctl start_post %I
-ExecStop=/usr/local/sbin/vmmctl stop %I
-ExecStopPost=/usr/local/sbin/vmmctl stop_post %I
+PIDFile=/run/libvirt/qemu/%i.pid
+ExecStart=/usr/local/sbin/vmmctl start %i
+ExecStartPost=/usr/local/sbin/vmmctl start_post %i
+ExecStop=/usr/local/sbin/vmmctl stop %i
+ExecStopPost=/usr/local/sbin/vmmctl stop_post %i
 Restart=on-success
 SuccessExitStatus=1
 
