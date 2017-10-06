@@ -50,25 +50,21 @@ function _log
 function prepare
 {
    local command=$1
-   local domain=$2
+   local prefix=$2
+   local instance=$3
 
-   local id=$(get_id $domain)
+   local domain=$prefix$instance
+   local domain_xml=$BASE_DIR/$prefix/$instance/$domain.xml
 
-   if [ ${#id} -gt 0 ]; then
-      local domain_xml=$BASE_DIR/$PREFIX/$id/$domain.xml
+   if [ -f $domain_xml ]; then
+      $command $domain $domain_xml
+      local rc=$?
 
-      if [ -f $domain_xml ]; then
-         $command $domain $domain_xml
-         local rc=$?
-
-         if [ $rc -ne 0 ]; then
-            log "returncode $rc"
-         fi
-      else
-         log "domain XML not found: $domain_xml"
+      if [ $rc -ne 0 ]; then
+         log "returncode '$command $domain $domain_xml': $rc"
       fi
    else
-      log "unable to identify ID: $domain"
+      log "domain XML not found: $domain_xml"
    fi
 }
 
@@ -92,17 +88,6 @@ function is_running
    fi
 
    echo $is_running
-}
-
-function get_id
-{
-   local domain=$1
-
-   if [[ "$domain" =~ $PREFIX($ID_REGEX) ]]; then
-      echo ${BASH_REMATCH[1]}
-   else
-      echo ""
-   fi
 }
 
 function get_ip
@@ -206,8 +191,8 @@ function status
 
 function exec_post
 {
-   local domain_xml=$1
-   local command=$2
+   local command=$1
+   local domain_xml=$2
 
    local exec=$(dirname $domain_xml)/${command}_post
 
@@ -219,7 +204,7 @@ function start_post   # called by 'prepare'
    local domain=$1   # unused
    local domain_xml=$2
 
-   exec_post $domain_xml start
+   exec_post start $domain_xml
 }
 
 function stop_post   # called by 'prepare'
@@ -227,7 +212,7 @@ function stop_post   # called by 'prepare'
    local domain=$1   # unused
    local domain_xml=$2
 
-   exec_post $domain_xml stop
+   exec_post stop $domain_xml
 }
 
 function port_forwarding_add   # uses functions/variables from the environment
@@ -235,22 +220,43 @@ function port_forwarding_add   # uses functions/variables from the environment
    local host_port=$1
    local guest_port=$2
 
-   local guest_ip=$(get_ip $domain)
+   local seconds=0
 
-   iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
-   iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+   while [ $seconds -lt 60 ]; do
+      if [ $((seconds%10)) -eq 0 ]; then   # every 10 seconds
+#        '$domain': start_post > exec_post > port_forwarding_add
+         local guest_ip=$(get_ip $domain)
+
+         if [ ! -z $guest_ip ]; then
+            seconds=60   # break loop
+         fi
+      fi
+      sleep 1
+      ((seconds++))
+   done
+
+   if [ -z "$host_port" ] || [ -z "$guest_ip" ] || [ -z "$guest_port" ]; then
+      log "error determining guest IP"
+   else
+      iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
+      iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+   fi
 }
 
 function port_forwarding_del   # uses functions/variables from the environment
 {
    local host_port=$1
    local guest_port=$2
+#  '$domain': start_post > exec_post > port_forwarding_add
    local guest_ip=$(get_ip $domain)
 
-   iptables -t nat -D PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
-   iptables -D FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+   if [ -z "$host_port" ] || [ -z "$guest_ip" ] || [ -z "$guest_port" ]; then
+      log "error"
+   else
+      iptables -t nat -D PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
+      iptables -D FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+   fi
 }
 
 log "$0 $*"
 prepare $*
-

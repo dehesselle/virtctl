@@ -1,0 +1,9 @@
+[Unit]
+Description=KVM common workspace
+
+[Mount]
+What=/dev/disk/by-uuid/(insert uuid here)
+Where=/srv/kvm/work
+Type=ext4
+Options=noatime,commit=600,data=writeback,nobarrier
+DirectoryMode=755

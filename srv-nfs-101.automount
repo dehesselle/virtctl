@@ -1,0 +1,8 @@
+[Unit]
+Description=KVM101 data volume
+
+[Automount]
+Where=/srv/nfs/101
+
+[Install]
+WantedBy=hypervisor.target
