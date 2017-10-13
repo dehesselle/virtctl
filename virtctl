@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 ################################################
 #                                              #
-#   vmmctl - Virtual Machine Monitor Control   #
+#   virtctl - libvirt based VM control         #
 #                                              #
-#   https://github.com/dehesselle/vmmctl       #
+#   https://github.com/dehesselle/virtctl      #
 #                                              #
 ################################################
 #
@@ -23,7 +23,7 @@
 # (This is for completeness sake; systemd has its own timeouts as well.)
 #
 
-CONFIG=/usr/local/etc/vmmctl.conf
+CONFIG=/usr/local/etc/virtctl.conf
 
 if [ -f $CONFIG ]; then
    . $CONFIG

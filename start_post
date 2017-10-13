@@ -1,11 +1,10 @@
-##################################################
-#                                                #
-#   start_post - post-start actions for vmmctl   #
-#               (sourced by vmmctl)              #
-#                                                #
-#   https://github.com/dehesselle/vmmctl         #
-#                                                #
-##################################################
+###################################################
+#                                                 #
+#   start_post - post-start actions for virtctl   #
+#                                                 #
+#   https://github.com/dehesselle/virtctl         #
+#                                                 #
+###################################################
 
 # uncomment to forward host:10022 to guest:22
 #port_forwarding_add 10022 22     # forward ssh (host:10022 to guest:22)

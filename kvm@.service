@@ -1,13 +1,13 @@
-############################################
-#                                          #
-#   Service: kvm                           #
-#                                          #
-#   https://github.com/dehesselle/vmmctl   #
-#                                          #
-############################################
+#############################################
+#                                           #
+#   Service: kvm                            #
+#                                           #
+#   https://github.com/dehesselle/virtctl   #
+#                                           #
+#############################################
 #
 # This is an instantiable service to start and stop virtual machines
-# using the helper-script 'vmmctl'.
+# using the helper-script virtctl.
 #
 [Unit]
 Description=Virtual Machine %p%i
@@ -17,12 +17,12 @@ RequiresMountsFor=/srv/kvm/work /srv/%p/%i
 
 [Service]
 Type=forking
-EnvironmentFile=/usr/local/etc/vmmctl.conf
+EnvironmentFile=/usr/local/etc/virtctl.conf
 PIDFile=/run/libvirt/qemu/%p%i.pid
-ExecStart=/usr/local/sbin/vmmctl start %p %i
-ExecStartPost=/usr/local/sbin/vmmctl start_post %p %i
-ExecStop=/usr/local/sbin/vmmctl stop %p %i
-ExecStopPost=/usr/local/sbin/vmmctl stop_post %p %i
+ExecStart=/usr/local/sbin/virtctl start %p %i
+ExecStartPost=/usr/local/sbin/virtctl start_post %p %i
+ExecStop=/usr/local/sbin/virtctl stop %p %i
+ExecStopPost=/usr/local/sbin/virtctl stop_post %p %i
 Restart=on-success
 SuccessExitStatus=1
 

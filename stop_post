@@ -1,11 +1,10 @@
-################################################
-#                                              #
-#   stop_post - post-stop actions for vmmctl   #
-#               (sourced by vmmctl)            #
-#                                              #
-#   https://github.com/dehesselle/vmmctl       #
-#                                              #
-################################################
+#################################################
+#                                               #
+#   stop_post - post-stop actions for virtctl   #
+#                                               #
+#   https://github.com/dehesselle/virtctl       #
+#                                               #
+#################################################
 
 # uncomment to stop forwarding host:10022 to guest:22
 #port_forwarding_del 10022 22     # delete forwarding ssh (host:10022 to guest:22)

@@ -1,6 +1,6 @@
-# vmmctl
+# virtctl
 ## About
-[vmmctl](https://github.com/dehesselle/vmmctl) is a helper script for starting/stopping libvirt-based virtual machines and the infrastructure around it to integrate it with systemd. If you're looking for a small and simple framework to start and stop your VMs with systemd, you might want to take a look.
+[virtctl](https://github.com/dehesselle/virtctl) is a helper script for starting/stopping libvirt-based virtual machines and the infrastructure around it to integrate it with systemd. If you're looking for a small and simple framework to start and stop your VMs with systemd, you might want to take a look.
 
 ## Getting started
 ### Requirements
@@ -30,8 +30,8 @@ Copy the files from the git repository into the locations as shown below.
 ```
 /etc/systemd/system/vm@.service
 /etc/systemd/system/hypervisor.target
-/usr/local/etc/vmmctl.conf
-/usr/local/sbin/vmmctl
+/usr/local/etc/virtctl.conf
+/usr/local/sbin/virtctl
 ```
 #### vm specific files (optional)
 According to the example above.
@@ -41,15 +41,15 @@ According to the example above.
 /srv/kvm/ubuntu/post_start
 /srv/kvm/ubuntu/post_stop
 ```
-__Hint:__ These two scripts (per VM) are optional - [vmmctl](https://github.com/dehesselle/vmmctl) checks for their presence and will do just fine without them.
+__Hint:__ These two scripts (per VM) are optional - [virtctl](https://github.com/dehesselle/virtctl) checks for their presence and will do just fine without them.
 ### Configuration
-- Change the parameter `DOMAIN_ROOT_DIR` in `vmmctl.conf` according to the name of your common root directory.
+- Change the parameter `DOMAIN_ROOT_DIR` in `virtctl.conf` according to the name of your common root directory.
 - Change the parameter `VIRTUAL_NETWORK` to the name of your virtual network.
 - The `post_start` and `post_stop` scripts won't do anything in their default state, everything has been commented out. They are already prepared to handle port forwarding but you're encouraged to put any start/stop task in there that you require.
 - Reload systemd's configuration with `systemctl daemon-reload`
 
 ### 3...2...1...Go!
-Accoring to the example above: start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `vmmctl.conf`, default is `/var/log/vmmctl.log`).
+Accoring to the example above: start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `virtctl.conf`, default is `/var/log/virtctl.log`).
 
 If you want systemd to automatically start and stop it on boot/shutdown, enable it with `systemctl enable vm@debian` and change your default target with `systemctl set-default hypervisor`.
 
