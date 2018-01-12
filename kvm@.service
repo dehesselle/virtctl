@@ -11,8 +11,8 @@
 #
 [Unit]
 Description=Virtual Machine %p%i
-Requires=libvirt-guests.service virtlogd.socket
-After=libvirt-guests.service virtlogd.socket
+Requires=libvirt-guests.service
+After=libvirt-guests.service
 RequiresMountsFor=/srv/kvm/work /srv/%p/%i
 
 [Service]
@@ -20,6 +20,7 @@ Type=forking
 EnvironmentFile=/usr/local/etc/virtctl.conf
 PIDFile=/run/libvirt/qemu/%p%i.pid
 ExecStart=/usr/local/sbin/virtctl start %p %i
+ExecStartPre=/usr/local/sbin/virtctl start_pre %p %i
 ExecStartPost=/usr/local/sbin/virtctl start_post %p %i
 ExecStop=/usr/local/sbin/virtctl stop %p %i
 ExecStopPost=/usr/local/sbin/virtctl stop_post %p %i

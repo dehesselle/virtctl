@@ -199,6 +199,27 @@ function exec_post
    [ -f "$exec" ] && source $exec
 }
 
+function start_pre
+{
+   local count=0
+
+   while [ $count -le 10 ]; do
+      $VIRSH connect 2>/dev/null
+      local rc=$?
+
+      if [ $rc -eq 0 ]; then
+         return 0
+      else
+        ((count++))
+        sleep 1
+      fi
+   done
+
+   log "hypervisor does not respond"
+
+   return $rc
+}
+
 function start_post   # called by 'prepare'
 {
    local domain=$1   # unused
