@@ -59,3 +59,6 @@ _It should work!_ - I'm using this myself on a daily basis. Granted, my setup is
 ### Todos
 - get virtual network name from XML
 - provide a hook script (see [libvirt wiki]( http://wiki.libvirt.org/page/Networking/#Forwarding_Incoming_Connections))
+
+## License
+[MIT](LICENSE)
