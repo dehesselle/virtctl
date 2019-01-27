@@ -28,7 +28,7 @@ Let's say you have two VMs, `debian` and `ubuntu`. Both consist of a Domain XML 
 Copy the files from the git repository into the locations as shown below.
 #### system files (mandatory)
 ```
-/etc/systemd/system/vm@.service
+/etc/systemd/system/kvm@.service
 /etc/systemd/system/hypervisor.target
 /usr/local/etc/virtctl.conf
 /usr/local/sbin/virtctl
@@ -49,16 +49,17 @@ __Hint:__ These two scripts (per VM) are optional - [virtctl](https://github.com
 - Reload systemd's configuration with `systemctl daemon-reload`
 
 ### 3...2...1...Go!
-Accoring to the example above: start your VM with `systemctl start vm@debian`. Check if it came up with `systemctl status vm@debian` and take a look at the logfile (`LOGFILE` in `virtctl.conf`, default is `/var/log/virtctl.log`).
+Accoring to the example above: start your VM with `systemctl start kvm@debian`. Check if it came up with `systemctl status kvm@debian` and take a look at the logfile (`LOGFILE` in `virtctl.conf`, default is `/var/log/virtctl.log`).
 
 If you want systemd to automatically start and stop it on boot/shutdown, enable it with `systemctl enable vm@debian` and change your default target with `systemctl set-default hypervisor`.
 
 ## Famous last words
-_It should work!_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the naming-related requirements above. On the other hand, if you have a more complex setup, that is where this solution falls short.  
+_"It should work!"_ - I'm using this myself on a daily basis. Granted, my setup is rather simple because I don't have to deal with multiple physical or virtual networks and I can live with the naming-related requirements above.
 
-### Todos
-- get virtual network name from XML
-- provide a hook script (see [libvirt wiki]( http://wiki.libvirt.org/page/Networking/#Forwarding_Incoming_Connections))
+There will be further development to remedy some of the limitations/ease up on the requirements (and take care of the issues), but virtctl will never become a "jack of all trades"-kind of solution.
+
+### Contributions
+There is a PKGBUILD created by [NihlisticPandemonium](https://github.com/nihilisticpandemonium), so virtctl is available in the [AUR](https://aur.archlinux.org/packages/virtctl-git/) 🙂 - thank you very much!
 
 ## License
 [MIT](LICENSE)
