@@ -1,31 +1,34 @@
 #############################################
 #                                           #
-#   Service: kvm                            #
+#   Service: virtctl                        #
 #                                           #
 #   https://github.com/dehesselle/virtctl   #
 #                                           #
 #############################################
 #
 # This is an instantiable service to start and stop virtual machines
-# using the helper-script virtctl.
+# using virsh.
 #
 [Unit]
-Description=Virtual Machine %p%i
+Description=Virtual Machine %i
 Requires=libvirt-guests.service
 After=libvirt-guests.service
-RequiresMountsFor=/srv/kvm/work /srv/%p/%i
+#RequiresMountsFor=   TODO example for dropin-file
 
 [Service]
 Type=forking
-EnvironmentFile=/usr/local/etc/virtctl.conf
-PIDFile=/run/libvirt/qemu/%p%i.pid
-ExecStart=/usr/local/sbin/virtctl start %p %i
-ExecStartPre=/usr/local/sbin/virtctl start_pre %p %i
-ExecStartPost=/usr/local/sbin/virtctl start_post %p %i
-ExecStop=/usr/local/sbin/virtctl stop %p %i
-ExecStopPost=/usr/local/sbin/virtctl stop_post %p %i
+EnvironmentFile=-/etc/virtctl.d/common.conf
+EnvironmentFile=-/etc/virtctl.d/%i.conf
+PIDFile=/run/libvirt/qemu/%i.pid
+ExecStartPre=/usr/bin/bash -c "COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++)); virsh connect 2>/dev/null; [ $? -eq 0 ] && exit 0 || sleep 1; done; exit 1"
+ExecStart=/usr/bin/virsh create ${VM_ROOT_DIR}/%i/%i.xml
+ExecStartPost=/usr/bin/bash -c "[ -f /etc/virtctl.d/common.func ] && source /etc/virtctl.d/common.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $VM_ROOT_DIR/%i/start_post ] && source $VM_ROOT_DIR/%i/start_post"
+ExecStop=/usr/bin/bash -c "COUNT=0; while [ $COUNT -le 45 ]; do ((COUNT++)); [ $(virsh list | grep running | grep %i | wc -l) -ne 0 ] && [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i || exit 0 ; sleep 1; done; exit 1"
+ExecStopPost=/usr/bin/bash -c "[ -f /etc/virtctl.d/common.func ] && source /etc/virtctl.d/common.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $VM_ROOT_DIR/%i/stop_post ] && source $VM_ROOT_DIR/%i/start_post"
 Restart=on-success
 SuccessExitStatus=1
+# 45 (in loop) + 15 (for latency)
+TimeoutStopSec=60
 
 [Install]
 WantedBy=hypervisor.target
