@@ -13,21 +13,28 @@
 Description=Virtual Machine %i
 Requires=libvirt-guests.service
 After=libvirt-guests.service
-#RequiresMountsFor=   TODO example for dropin-file
+#RequiresMountsFor=   TODO move to example for dropin-file
 
 [Service]
 Type=forking
-EnvironmentFile=-/etc/virtctl.d/common.conf
+# libvirt default directory for all domain XMLs in on place
+Environment=DOMAIN_DIR=/etc/libvirt/qemu
+# for domain-specific directories use something like this
+#Environment=DOMAIN_DIR=/srv/kvm/%i
+EnvironmentFile=-/etc/virtctl.d/global.conf
 EnvironmentFile=-/etc/virtctl.d/%i.conf
 PIDFile=/run/libvirt/qemu/%i.pid
-ExecStartPre=/usr/bin/bash -c "COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++)); virsh connect 2>/dev/null; [ $? -eq 0 ] && exit 0 || sleep 1; done; exit 1"
-ExecStart=/usr/bin/virsh create ${VM_ROOT_DIR}/%i/%i.xml
-ExecStartPost=/usr/bin/bash -c "[ -f /etc/virtctl.d/common.func ] && source /etc/virtctl.d/common.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $VM_ROOT_DIR/%i/start_post ] && source $VM_ROOT_DIR/%i/start_post"
-ExecStop=/usr/bin/bash -c "COUNT=0; while [ $COUNT -le 45 ]; do ((COUNT++)); [ $(virsh list | grep running | grep %i | wc -l) -ne 0 ] && [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i || exit 0 ; sleep 1; done; exit 1"
-ExecStopPost=/usr/bin/bash -c "[ -f /etc/virtctl.d/common.func ] && source /etc/virtctl.d/common.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $VM_ROOT_DIR/%i/stop_post ] && source $VM_ROOT_DIR/%i/start_post"
-Restart=on-success
+# make sure libvirtd is responsive by connecting to it
+ExecStartPre=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++)); virsh connect 2>/dev/null; [ $? -eq 0 ] && exit 0 || sleep 1; done; exit 1'
+ExecStart=/usr/bin/virsh create ${DOMAIN_DIR}/%i.xml
+ExecStartPost=/usr/bin/bash -c '[ -f /etc/virtctl.d/global.func ] && source /etc/virtctl.d/global.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $DOMAIN_DIR/%i_post-start ] && source $DOMAIN_DIR/%i_post-start'
+# shut down domain gracefully by sending ACPI shutdown event
+ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
+ExecStopPost=/usr/bin/bash -c '[ -f /etc/virtctl.d/global.func ] && source /etc/virtctl.d/global.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $DOMAIN_DIR/%i_post-start ] && source $DOMAIN_DIR/%i_post-start'
+#Restart=on-success   # deleteme
+# shutting down a domain gracefully still gives rc=1
 SuccessExitStatus=1
-# 45 (in loop) + 15 (for latency)
+# shutting down a domain is not instantaneous
 TimeoutStopSec=60
 
 [Install]
