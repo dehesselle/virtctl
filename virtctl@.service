@@ -29,7 +29,7 @@ ExecStartPre=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++));
 ExecStart=/usr/bin/virsh create ${DOMAIN_DIR}/%i.xml
 ExecStartPost=/usr/bin/bash -c '[ -f /etc/virtctl.d/global.func ] && source /etc/virtctl.d/global.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $DOMAIN_DIR/%i_post-start ] && source $DOMAIN_DIR/%i_post-start'
 # shut down domain gracefully by sending ACPI shutdown event
-ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
+ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i 2>/dev/null)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
 ExecStopPost=/usr/bin/bash -c '[ -f /etc/virtctl.d/global.func ] && source /etc/virtctl.d/global.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $DOMAIN_DIR/%i_post-start ] && source $DOMAIN_DIR/%i_post-start'
 #Restart=on-success   # deleteme
 # shutting down a domain gracefully still gives rc=1
