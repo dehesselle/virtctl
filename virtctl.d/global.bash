@@ -1,267 +1,78 @@
-#!/usr/bin/env bash
-################################################
-#                                              #
-#   virtctl - libvirt based VM control         #
-#                                              #
-#   https://github.com/dehesselle/virtctl      #
-#                                              #
-################################################
+#############################################
+#                                           #
+#   /etc/virtctl.d/global.bash              #
+#                                           #
+#   https://github.com/dehesselle/virtctl   #
+#                                           #
+#############################################
+
 #
-# This is a helper script to easily start/stop virtual machines based on
-# libvirt, using 'virsh'. Some basic settings can be configured via
-# a config file ('CONFIG').
-#
-# It's designed to be used from a systemd service; specifically, the
-# 'shutdown' function is implemented as a synchronous process, waiting
-# for the VM to shut down gracefully. This is to avoid systemd killing
-# the VM ('ExecStop' is supposed to be blocking), risking data loss or
-# even corruption of the VM.
-# There is a safeguard in place, called 'GRACEFUL_SHUTDOWN_TIMEOUT', to
-# avoid deadlocking if things don't work as expected. If that timeout
-# is exceeded, we will no longer block and systemd will most likely
-# kill the VM.
-# (This is for completeness sake; systemd has its own timeouts as well.)
+# - UPPERCASE variables are global variables set by the virtctl service
+#   before sourcing this file.
 #
 
-CONFIG=/usr/local/etc/virtctl.conf
-
-if [ -f $CONFIG ]; then
-   . $CONFIG
-else
-   echo "missing file: $CONFIG"
-   exit 1
-fi
-
-shopt -s expand_aliases
-
-alias log='_log "$FUNCNAME"'
-
-function _log
+# NAT only: get domain's internal IP address
+function get_domain_ip
 {
-   local func_name=$1
+  local domain=$1
+  local interface=$2   # argument is optional
 
-   if [ ${#func_name} -eq 0 ]; then
-      func_name=main
-   fi
+  [ -z $interface ] && interface=vnet0   # set default value
 
-   echo "$(date "+%Y%m%d-%H%M%S") $func_name: ${*:2}" >> $LOGFILE
-}
+  local seconds=0
+  while [ $seconds -lt 60 ]; do
+    if [ $((seconds%5)) -eq 0 ]; then   # every 5 seconds
+      # get output form domifaddr command,
+      # only keep the third line (lines 1-2: header),
+      # only keep the fourth argument (ip/mask),
+      # only keep the first argument (ip)      
+      local domain_ip=$(virsh domifaddr $domain $interface |
+        sed -n '3p' | 
+        awk '{ print $4 }' |
+        awk -F "/" ' { print $1 }')
 
-function prepare
-{
-   local command=$1
-   local prefix=$2
-   local instance=$3
-
-   local domain=$prefix$instance
-   local domain_xml=$BASE_DIR/$prefix/$instance/$domain.xml
-
-   if [ -f $domain_xml ]; then
-      $command $domain $domain_xml
-      local rc=$?
-
-      if [ $rc -ne 0 ]; then
-         log "returncode '$command $domain $domain_xml': $rc"
-      fi
-   else
-      log "domain XML not found: $domain_xml"
-   fi
-}
-
-function start   # called by 'prepare'
-{
-   local domain=$1   # unused
-   local domain_xml=$2
-
-   $VIRSH create $domain_xml
-   return $?
-}
-
-function is_running
-{
-   local domain=$1
-
-   local is_running=false
-
-   if [ $($VIRSH list | grep "running" | grep "$domain" | wc -l) -eq 1 ]; then
-      is_running=true
-   fi
-
-   echo $is_running
-}
-
-function get_ip
-{
-   local domain=$1
-
-   local dynamic=true   # dynamic/static is unused functionality
-#  dynamic: determine IP from dynamic DHCP leases; works only while lease is
-#           still active
-#  static:  determine IP from static DHCP leases; works only if a static lease
-#           has been defined
-   if [ ${#dynamic} -eq 0 ]; then
-     local domain_ip=$($VIRSH net-dumpxml $VIRTUAL_NETWORK | grep "$domain")
-     if [[ "$domain_ip" =~ ip=\'([^\']+)\' ]]; then   # ' <- fix syntax highlighting
-        domain_ip=${BASH_REMATCH[1]}
-     fi
-   else
-     local domain_ip=$($VIRSH net-dhcp-leases $VIRTUAL_NETWORK | grep "$domain" | awk '{ print $5 }')
-     domain_ip=${domain_ip%/*}   # remove mask (usually "/24")
-   fi
-
-   echo $domain_ip
-}
-
-function is_up
-{
-   local domain=$1
-   local is_up=false
-
-   if $(is_running $domain); then
-      ping -c 1 $(get_ip $domain) 1>/dev/null 2>&1
-      local ping_rc=$?
-      if [ $ping_rc -eq 0 ]; then
-         is_up=true
-      fi
-   else
-      log "[$domain] not running"
-   fi
-
-   echo $is_up
-}
-
-function stop   # called by 'prepare'
-{
-   local domain=$1
-   local domain_xml=$2   # unused
-
-   local seconds=0
-   local keep_waiting=true
-
-   while $keep_waiting; do
-      if $(is_running $domain); then
-         if   [ $seconds -eq 0 ]; then   # first iteration: initiate shutdown
-            log "[$domain] requesting shutdown"
-            $VIRSH shutdown $domain
-         elif [ $((seconds%20)) -eq 0 ]; then   # request shutdown every 20 sec
-#           for VMs that need more "persuasion" to shutdown
-#           (I'm looking at you, Windows!)
-            log "[$domain] $seconds seconds passed, requesting shutdown again"
-            $VIRSH shutdown $domain
-         elif [ $seconds -ge $GRACEFUL_SHUTDOWN_TIMEOUT ]; then   # give up
-            log "[$domain] $seconds seconds passed, giving up"
-            keep_waiting=false
-         fi
-         sleep 1
-      else
-         if [ $seconds -eq 0 ]; then
-            log "[$domain] was already down"
-         else
-            log "[$domain] is now down"
-         fi
-         keep_waiting=false
-      fi
-
-      ((seconds++))
-   done
-}
-
-function shutdown_all
-{
-   log "begin sequence"
-
-   for domain in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
-      shutdown $domain &
-   done
-
-   while [ $($VIRSH list | grep "running" | wc -l) -gt 0 ]; do
-      log "waiting for VMs to shutdown"
-      sleep 5
-   done
-
-   log "end sequence"
-}
-
-function status
-{
-   for domain in $($VIRSH list | grep "running" | awk '{ print $2 }'); do
-      log "[$domain] is running"
-   done
-}
-
-function exec_post
-{
-   local command=$1
-   local domain_xml=$2
-
-   local exec=$(dirname $domain_xml)/${command}_post
-
-   [ -f "$exec" ] && source $exec
-}
-
-function start_pre
-{
-   local count=0
-
-   while [ $count -le 10 ]; do
-      $VIRSH connect 2>/dev/null
-      local rc=$?
-
-      if [ $rc -eq 0 ]; then
-         return 0
-      else
-        ((count++))
-        sleep 1
-      fi
-   done
-
-   log "hypervisor does not respond"
-
-   return $rc
-}
-
-function start_post   # called by 'prepare'
-{
-   local domain=$1   # unused
-   local domain_xml=$2
-
-   exec_post start $domain_xml
-}
-
-function stop_post   # called by 'prepare'
-{
-   local domain=$1   # unused
-   local domain_xml=$2
-
-   exec_post stop $domain_xml
-}
-
-function port_forwarding_add   # uses functions/variables from the environment
-{
-   local host_port=$1
-   local guest_port=$2
-
-   local seconds=0
-
-   while [ $seconds -lt 60 ]; do
-      if [ $((seconds%10)) -eq 0 ]; then   # every 10 seconds
-#        '$domain': start_post > exec_post > port_forwarding_add
-         local guest_ip=$(get_ip $domain)
-
-         if [ ! -z $guest_ip ]; then
-            seconds=60   # break loop
-         fi
-      fi
+      [ ! -z $domain_ip ] && break   # we got the IP address
+    fi
       sleep 1
       ((seconds++))
    done
 
-   if [ -z "$host_port" ] || [ -z "$guest_ip" ] || [ -z "$guest_port" ]; then
-      log "error determining guest IP"
-   else
-      iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
-      iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
-   fi
+   echo $domain_ip
+}
+
+# NAT only: forward port from host to guest
+function forward_port   # uses functions/variables from the environment
+{
+  local host_port=$1
+  local guest_port=$2
+  local guest_interface=$3   # argument is optional
+
+  [ -z $guest_interface ] && guest_interface=vnet0   # set default value
+  local guest_ip=$(get_domain_ip $DOMAIN $guest_interface)
+
+  [ -z $host_port ] && (echo "$FUNCNAME: host_port missing" && return 1)
+  [ -z $guest_port ] && (echo "$FUNCNAME: guest_port missing" && return 1)
+  [ -z $guest_ip ] && (echo "$FUNCNAME: guest_ip missing" && return 1)
+
+  iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
+  iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
+}
+
+# NAT only: remove all forwarded ports
+function remove_all_forwardings
+{
+  local guest_interface=$1
+
+  [ -z $guest_interface ] && guest_interface=vnet0   # set default value
+  local guest_ip=$(get_domain_ip $DOMAIN $guest_interface)
+
+  for rule in $(iptables -t nat -L PREROUTING --line-numbers | grep $guest_ip | awk '{ print $1 }'); do
+    iptables -t nat -D PREROUTING $rule
+  done
+
+  for rule in $(iptables -L FORWARD --line-numbers | grep $guest_ip | awk '{ print $1 }'); do
+    iptables -D FORWARD $rule
+  done
 }
 
 function port_forwarding_del   # uses functions/variables from the environment
@@ -272,12 +83,14 @@ function port_forwarding_del   # uses functions/variables from the environment
    local guest_ip=$(get_ip $domain)
 
    if [ -z "$host_port" ] || [ -z "$guest_ip" ] || [ -z "$guest_port" ]; then
-      log "error"
+      echo "error"
    else
       iptables -t nat -D PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
       iptables -D FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
    fi
 }
 
-log "$0 $*"
-prepare $*
+function virtctl_pre_stop
+{
+  remove_all_forwardings
+}
