@@ -1,16 +1,18 @@
-#############################################
-#                                           #
-#   /etc/virtctl.d/functions.sh             #
-#                                           #
-#   https://github.com/dehesselle/virtctl   #
-#                                           #
-#############################################
+################################################################################
+#                                                                              #
+#   /etc/virtctl.d/functions.sh                                                #
+#                                                                              #
+#   https://github.com/dehesselle/virtctl                                      #
+#                                                                              #
+################################################################################
 
 #
 # notes:
 #   - UPPERCASE variables are global variables set by the virtctl service
 #   - functions prefixed with "virtctl_" get called by the service
 #
+
+### FUNCTIONS ##################################################################
 
 # NAT only: get domain's internal IP address
 function get_domain_ip
@@ -77,13 +79,26 @@ function remove_all_forwardings
 }
 
 # This function gets called by the service's first ExexStop command.
-function virtctl_pre_stop
+function virtctl_stoppre
 {
   remove_all_forwardings
 }
 
-# Source instance specific functions, if available. This provides a way
+### MAIN #######################################################################
+
+COMMAND=$1   # ExecStartPost, ExecStopPre, ExecStopPost
+
+# Source instance specific functions if available. This provides a way
 # to separate global from instance-specific functionality.
 INSTANCE_FUNCTIONS=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/$DOMAIN.sh
-[ -f $INSTANCE_FUNCTIONS ] && source $INSTANCE_FUNCTIONS
+[ -f $INSTANCE_FUNCTIONS ] && source $INSTANCE_FUNCTIONS || :
+
+# Run startpost/stoppost actions if available.
+case $COMMAND in
+  ExecStartPost) COMMAND=startpost ;;
+  ExecStopPost)  COMMAND=stoppost  ;;
+  ExecStopPre)   COMMAND=stoppre   ;;
+esac
+
+[ -f $DOMAIN_DIR/${DOMAIN}_$COMMAND ] && source $DOMAIN_DIR/${DOMAIN}_$COMMAND || :
 

@@ -37,16 +37,16 @@ PIDFile=/run/libvirt/qemu/%i.pid
 ExecStartPre=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++)); virsh connect 2>/dev/null; [ $? -eq 0 ] && exit 0 || sleep 1; done; exit 1'
 # Create the domain.
 ExecStart=/usr/bin/virsh create ${DOMAIN_DIR}/%i.xml
-# Provide a (optional) post-start functionality per domain.
-ExecStartPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_post_start ] && source $DOMAIN_DIR/%i_post_start || exit 0'
+# Provide a (optional) post-start functionality.
+ExecStartPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStartPost || :'
 # This first ExecStop acts as substitute for the non-existing "ExecStopPre".
 # It is required because we have post-stop actions that actually need to run
-# while the domain is still up.
-ExecStop=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_pre_stop ] && source $DOMAIN_DIR/%i_pre_stop; [ "$(type -t virtctl_pre_stop)" = "function" ] && virtctl_pre_stop || exit 0'
+# while the domain is still running.
+ExecStop=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPre; [ "$(type -t virtctl_stoppre)" = "function" ] && virtctl_stoppre || :'
 # Shutdown the domain gracefully by sending ACPI shutdown event.
 ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i 2>/dev/null)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
 # Provide a (optional) post-stop functionality per domain.
-ExecStopPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_post_stop ] && source $DOMAIN_DIR/%i_post_stop || exit 0'
+ExecStopPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPost || :'
 # Shutting down a domain gracefully results in rc=1.
 SuccessExitStatus=1
 # Shutting down a domain can take some time.

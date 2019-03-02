@@ -1,6 +1,6 @@
 ################################################################################
 #                                                                              #
-#   {instance name}_post_stop - post-stop actions for virtctl                  #
+#   {instance name}_stoppost - post-stop actions for virtctl                   #
 #                                                                              #
 #   https://github.com/dehesselle/virtctl                                      #
 #                                                                              #
