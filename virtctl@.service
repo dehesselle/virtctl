@@ -13,7 +13,6 @@
 Description=Virtual Machine %i
 Requires=libvirt-guests.service
 After=libvirt-guests.service
-#RequiresMountsFor=   TODO move to example for dropin-file
 
 [Service]
 Type=forking
@@ -21,7 +20,7 @@ Type=forking
 # This allows virtctl to seemlessly integrate with a default setup.
 # If you prefer another file layout - e.g. all configuration and
 # image files in one place per domain, like in previous versions of virtctl - 
-# override this setting in a drop-in with something like
+# override this setting in a drop-in (see file_layout.conf.example)
 # Environment=DOMAIN_DIR=/srv/kvm/%i
 Environment=DOMAIN_DIR=/etc/libvirt/qemu
 # FUNCTIONS points to the file that contains virtctl's convenience functions.

@@ -1,0 +1,19 @@
+################################################################################
+#                                                                              #
+#   file_layout.conf.example - alternate file layout                           #
+#                                                                              #
+#   https://github.com/dehesselle/virtctl                                      #
+#                                                                              #
+################################################################################
+
+#
+# Configure virtctl to look in domain-specific directories (that are actually
+# mounts) for the XML. This is how to rebuild the default configuration from
+# older versions (pre v0.3) of virtctl.
+#
+
+[Unit]
+RequiresMountsFor=/srv/kvm/%i
+
+[Service]
+Environment=DOMAIN_DIR=/srv/kvm/%i
