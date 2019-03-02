@@ -17,26 +17,40 @@ After=libvirt-guests.service
 
 [Service]
 Type=forking
-# libvirt default directory for all domain XMLs in on place
-# (for domain-specific directories use something like this:
-#  Environment=DOMAIN_DIR=/srv/kvm/%i)
+# DOMAIN_DIR is set to libvirt's default directory that contains all XML files.
+# This allows virtctl to seemlessly integrate with a default setup.
+# If you prefer another file layout - e.g. all configuration and
+# image files in one place per domain, like in previous versions of virtctl - 
+# override this setting in a drop-in with something like
+# Environment=DOMAIN_DIR=/srv/kvm/%i
 Environment=DOMAIN_DIR=/etc/libvirt/qemu
-Environment=DOMAIN=%i
+# FUNCTIONS points to the file that contains virtctl's convenience functions.
+# It get's sourced into the environment first thing in every Exec command.
+# It provides functions like 'forward_port' that you can use in your
+# custom '{instance}_post_start' file.
 Environment=FUNCTIONS=/etc/virtctl.d/functions.sh
+# DOMAIN is the domain name (instance name) that you're controlling with this
+# service. The FUNCTIONS above expect this variable to be set.
+Environment=DOMAIN=%i
+# The service needs to know where the pid file is.
 PIDFile=/run/libvirt/qemu/%i.pid
-# make sure libvirtd is responsive by connecting to it
+# Check if libvirtd is responsive by connecting to it.
 ExecStartPre=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++)); virsh connect 2>/dev/null; [ $? -eq 0 ] && exit 0 || sleep 1; done; exit 1'
+# Create the domain.
 ExecStart=/usr/bin/virsh create ${DOMAIN_DIR}/%i.xml
+# Provide a (optional) post-start functionality per domain.
 ExecStartPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_post_start ] && source $DOMAIN_DIR/%i_post_start || exit 0'
-# this first ExecStop acts as substitute for the non-existing "ExecStopPre" 
+# This first ExecStop acts as substitute for the non-existing "ExecStopPre".
+# It is required because we have post-stop actions that actually need to run
+# while the domain is still up.
 ExecStop=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_pre_stop ] && source $DOMAIN_DIR/%i_pre_stop; [ "$(type -t virtctl_pre_stop)" = "function" ] && virtctl_pre_stop || exit 0'
-# shut down domain gracefully by sending ACPI shutdown event
+# Shutdown the domain gracefully by sending ACPI shutdown event.
 ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i 2>/dev/null)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
+# Provide a (optional) post-stop functionality per domain.
 ExecStopPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_post_stop ] && source $DOMAIN_DIR/%i_post_stop || exit 0'
-#Restart=on-success   # deleteme
-# shutting down a domain gracefully results in rc=1
+# Shutting down a domain gracefully results in rc=1.
 SuccessExitStatus=1
-# shutting down a domain is not instantaneous
+# Shutting down a domain can take some time.
 TimeoutStopSec=60
 
 [Install]

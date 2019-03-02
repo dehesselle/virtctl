@@ -7,8 +7,9 @@
 #############################################
 
 #
-# - UPPERCASE variables are global variables set by the virtctl service
-# - functions prefixed with "virtctl_" get called by the service
+# notes:
+#   - UPPERCASE variables are global variables set by the virtctl service
+#   - functions prefixed with "virtctl_" get called by the service
 #
 
 # NAT only: get domain's internal IP address
@@ -75,12 +76,14 @@ function remove_all_forwardings
   done
 }
 
+# This function gets called by the service's first ExexStop command.
 function virtctl_pre_stop
 {
   remove_all_forwardings
 }
 
-# source instance specific functions if available
+# Source instance specific functions, if available. This provides a way
+# to separate global from instance-specific functionality.
 INSTANCE_FUNCTIONS=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/$DOMAIN.sh
 [ -f $INSTANCE_FUNCTIONS ] && source $INSTANCE_FUNCTIONS
 
