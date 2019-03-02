@@ -18,27 +18,27 @@ After=libvirt-guests.service
 [Service]
 Type=forking
 # libvirt default directory for all domain XMLs in on place
+# (for domain-specific directories use something like this:
+#  Environment=DOMAIN_DIR=/srv/kvm/%i)
 Environment=DOMAIN_DIR=/etc/libvirt/qemu
-# for domain-specific directories use something like this
-#Environment=DOMAIN_DIR=/srv/kvm/%i
-EnvironmentFile=-/etc/virtctl.d/global.conf
-EnvironmentFile=-/etc/virtctl.d/%i.conf
+Environment=DOMAIN=%i
+Environment=FUNCTIONS=/etc/virtctl.d/functions.sh
 PIDFile=/run/libvirt/qemu/%i.pid
 # make sure libvirtd is responsive by connecting to it
 ExecStartPre=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++)); virsh connect 2>/dev/null; [ $? -eq 0 ] && exit 0 || sleep 1; done; exit 1'
 ExecStart=/usr/bin/virsh create ${DOMAIN_DIR}/%i.xml
-ExecStartPost=/usr/bin/bash -c 'export DOMAIN=%i; [ -f /etc/virtctl.d/global.func ] && source /etc/virtctl.d/global.func; [ -f /etc/virtctl.d/%i.func ] && source /etc/virtctl.d/%i.func; [ -f $DOMAIN_DIR/%i_post-start ] && source $DOMAIN_DIR/%i_post-start'
+ExecStartPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_post_start ] && source $DOMAIN_DIR/%i_post_start || exit 0'
 # this first ExecStop acts as substitute for the non-existing "ExecStopPre" 
-ExecStop=/usr/bin/bash -c 'export DOMAIN=%i; [ -f /etc/virtctl.d/global.bash ] && source /etc/virtctl.d/global.bash; [ -f /etc/virtctl.d/%i.bash ] && source /etc/virtctl.d/%i.bash; [ -f $DOMAIN_DIR/%i_pre_stop ] && source $DOMAIN_DIR/%i_pre_stop; virtctl_pre_stop'
+ExecStop=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_pre_stop ] && source $DOMAIN_DIR/%i_pre_stop; [ "$(type -t virtctl_pre_stop)" = "function" ] && virtctl_pre_stop || exit 0'
 # shut down domain gracefully by sending ACPI shutdown event
 ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i 2>/dev/null)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
+ExecStopPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS}; [ -f $DOMAIN_DIR/%i_post_stop ] && source $DOMAIN_DIR/%i_post_stop || exit 0'
 #Restart=on-success   # deleteme
-# shutting down a domain gracefully still gives rc=1
+# shutting down a domain gracefully results in rc=1
 SuccessExitStatus=1
 # shutting down a domain is not instantaneous
 TimeoutStopSec=60
 
 [Install]
 WantedBy=hypervisor.target
-
 

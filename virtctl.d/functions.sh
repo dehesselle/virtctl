@@ -1,6 +1,6 @@
 #############################################
 #                                           #
-#   /etc/virtctl.d/global.bash              #
+#   /etc/virtctl.d/functions.sh             #
 #                                           #
 #   https://github.com/dehesselle/virtctl   #
 #                                           #
@@ -8,7 +8,7 @@
 
 #
 # - UPPERCASE variables are global variables set by the virtctl service
-#   before sourcing this file.
+# - functions prefixed with "virtctl_" get called by the service
 #
 
 # NAT only: get domain's internal IP address
@@ -75,22 +75,12 @@ function remove_all_forwardings
   done
 }
 
-function port_forwarding_del   # uses functions/variables from the environment
-{
-   local host_port=$1
-   local guest_port=$2
-#  '$domain': start_post > exec_post > port_forwarding_add
-   local guest_ip=$(get_ip $domain)
-
-   if [ -z "$host_port" ] || [ -z "$guest_ip" ] || [ -z "$guest_port" ]; then
-      echo "error"
-   else
-      iptables -t nat -D PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
-      iptables -D FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
-   fi
-}
-
 function virtctl_pre_stop
 {
   remove_all_forwardings
 }
+
+# source instance specific functions if available
+INSTANCE_FUNCTIONS=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/$DOMAIN.sh
+[ -f $INSTANCE_FUNCTIONS ] && source $INSTANCE_FUNCTIONS
+
