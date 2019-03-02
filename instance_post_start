@@ -1,16 +1,22 @@
-###################################################
-#                                                 #
-#   start_post - post-start actions for virtctl   #
-#                                                 #
-#   https://github.com/dehesselle/virtctl         #
-#                                                 #
-###################################################
+################################################################################
+#                                                                              #
+#   {instance name}_post_start - post-start actions for virtctl                #
+#                                                                              #
+#   https://github.com/dehesselle/virtctl                                      #
+#                                                                              #
+################################################################################
 
-# uncomment to forward host:10022 to guest:22
-#port_forwarding_add 10022 22     # forward ssh (host:10022 to guest:22)
+#
+# If present, this file gets sourced after the VM has been started.
+# Use it to run any post-start actions that you require.
+#
+# virtctl provides a convenient 'forward_port' function (when using NAT
+# network), see examples below.
+#
 
-# uncomment to forward host:10080 to guest:80
-#port_forwarding_add 10080 80     # forward http (host:10080 to guest:80)
+#forward_port 10022 22     # forward ssh (host:10022 to guest:22)
 
-# uncomment to forward host:13389 to guest:3389
-#port_forwarding_add 13389 3389   # forward rdp (host:13389 to guest:3389)
+#forward_port 10080 80     # forward http (host:10080 to guest:80)
+
+#forward_port 13389 3389   # forward rdp (host:13389 to guest:3389)
+

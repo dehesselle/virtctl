@@ -1,16 +1,15 @@
-#################################################
-#                                               #
-#   stop_post - post-stop actions for virtctl   #
-#                                               #
-#   https://github.com/dehesselle/virtctl       #
-#                                               #
-#################################################
+################################################################################
+#                                                                              #
+#   {instance name}_post_stop - post-stop actions for virtctl                  #
+#                                                                              #
+#   https://github.com/dehesselle/virtctl                                      #
+#                                                                              #
+################################################################################
 
-# uncomment to stop forwarding host:10022 to guest:22
-#port_forwarding_del 10022 22     # delete forwarding ssh (host:10022 to guest:22)
+#
+# If present, this file gets sourced after the VM has been
+# stopped. Use it to run any post-stop actions that you require.
+#
+# (Forwarded ports get taken care of automatically.)
+#
 
-# uncomment to stop forwarding host:10080 to guest:80
-#port_forwarding_del 10080 80     # delete forwarding http (host:10080 to guest:80)
-
-# uncomment to stop forwarding host:13389 to guest:3389
-#port_forwarding_del 13389 3389   # delete forwarding rdp (host:13389 to guest:3389)
