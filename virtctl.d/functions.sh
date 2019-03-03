@@ -28,9 +28,9 @@ function get_domain_ip
       # get output form domifaddr command,
       # only keep the third line (lines 1-2: header),
       # only keep the fourth argument (ip/mask),
-      # only keep the first argument (ip)      
+      # only keep the first argument (ip)
       local domain_ip=$(virsh domifaddr $domain $interface |
-        sed -n '3p' | 
+        sed -n '3p' |
         awk '{ print $4 }' |
         awk -F "/" ' { print $1 }')
 
@@ -39,6 +39,8 @@ function get_domain_ip
       sleep 1
       ((seconds++))
    done
+
+   [ $seconds -eq 60 ] && echo "$FUNCNAME error" >&2
 
    echo $domain_ip
 }
@@ -88,10 +90,15 @@ function virtctl_stoppre
 
 COMMAND=$1   # ExecStartPost, ExecStopPre, ExecStopPost
 
+ETC_DIR=$(dirname $(readlink -f ${BASH_SOURCE[0]}))   # this file's directory
+
 # Source instance specific functions if available. This provides a way
 # to separate global from instance-specific functionality.
-INSTANCE_FUNCTIONS=$(dirname $(readlink -f ${BASH_SOURCE[0]}))/$DOMAIN.sh
-[ -f $INSTANCE_FUNCTIONS ] && source $INSTANCE_FUNCTIONS || :
+INSTANCE_FUNCTIONS=$ETC_DIR/$DOMAIN.sh
+if [ -f $INSTANCE_FUNCTIONS ]; then
+  echo "sourcing $INSTANCE_FUNCTIONS"
+  source $INSTANCE_FUNCTIONS
+fi
 
 # Run startpost/stoppost actions if available.
 case $COMMAND in
@@ -100,5 +107,12 @@ case $COMMAND in
   ExecStopPre)   COMMAND=stoppre   ;;
 esac
 
-[ -f $DOMAIN_DIR/${DOMAIN}_$COMMAND ] && source $DOMAIN_DIR/${DOMAIN}_$COMMAND || :
+# Files in DOMAIN_DIR take precedence over files in ETC_DIR.
+if   [ -f $DOMAIN_DIR/${DOMAIN}_$COMMAND ]; then
+  echo "sourcing $DOMAIN_DIR/${DOMAIN}_$COMMAND"
+  source $DOMAIN_DIR/${DOMAIN}_$COMMAND
+elif [ -f $ETC_DIR/${DOMAIN}_$COMMAND ]; then
+  echo "sourcing $ETC_DIR/${DOMAIN}_$COMMAND"
+  source $ETC_DIR/${DOMAIN}_$COMMAND
+fi
 
