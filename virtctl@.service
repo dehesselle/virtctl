@@ -44,11 +44,9 @@ ExecStartPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecS
 # while the domain is still running.
 ExecStop=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPre; [ "$(type -t virtctl_stoppre)" = "function" ] && virtctl_stoppre || :'
 # Shutdown the domain gracefully by sending ACPI shutdown event.
-ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do if [ "$(virsh domstate %i 2>/dev/null)" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); sleep 1; else exit 0; fi; done; exit 1'
+ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do STATE=$(virsh domstate %i 2>&1); if [ "$STATE" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); elif [ "$STATE" = "shut off" ] || [ "${STATE::27}" = "error: failed to get domain" ]; then exit 0; fi; sleep 1; done; exit 1'
 # Provide a (optional) post-stop functionality per domain.
 ExecStopPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPost || :'
-# Shutting down a domain gracefully results in rc=1.
-SuccessExitStatus=1
 # Shutting down a domain can take some time.
 TimeoutStopSec=60
 
