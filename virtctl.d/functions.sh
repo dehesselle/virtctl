@@ -14,13 +14,22 @@
 
 ### FUNCTIONS ##################################################################
 
+function get_domain_interface
+{
+  local domain=$1
+
+  # returns the first interface only!
+  echo $(virsh domiflist $domain | sed -n '3p' | awk '{ print $1 }')
+}
+
 # NAT only: get domain's internal IP address
 function get_domain_ip
 {
   local domain=$1
   local interface=$2   # argument is optional
 
-  [ -z $interface ] && interface=vnet0   # set default value
+  # set the first interface
+  [ -z $interface ] && interface=$(get_domain_interface $domain)
 
   local seconds=0
   while [ $seconds -lt 60 ]; do
@@ -104,7 +113,7 @@ fi
 case $COMMAND in
   ExecStartPost) COMMAND=startpost ;;
   ExecStopPost)  COMMAND=stoppost  ;;
-  ExecStopPre)   COMMAND=stoppre   ;;
+  ExecStopPre)   COMMAND=stoppre   ;;    # undocumented on purpose!
 esac
 
 # Files in DOMAIN_DIR take precedence over files in ETC_DIR.
