@@ -61,7 +61,6 @@ function forward_port   # uses functions/variables from the environment
   local guest_port=$2
   local guest_interface=$3   # argument is optional
 
-  [ -z $guest_interface ] && guest_interface=vnet0   # set default value
   local guest_ip=$(get_domain_ip $DOMAIN $guest_interface)
 
   [ -z $host_port ] && (echo "$FUNCNAME: host_port missing" && return 1)
@@ -75,9 +74,8 @@ function forward_port   # uses functions/variables from the environment
 # NAT only: remove all forwarded ports
 function remove_all_forwardings
 {
-  local guest_interface=$1
+  local guest_interface=$1   # argument is optional
 
-  [ -z $guest_interface ] && guest_interface=vnet0   # set default value
   local guest_ip=$(get_domain_ip $DOMAIN $guest_interface)
 
   for rule in $(iptables -t nat -L PREROUTING --line-numbers | grep $guest_ip | awk '{ print $1 }'); do
