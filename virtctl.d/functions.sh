@@ -81,11 +81,11 @@ function remove_all_forwardings
 
   local guest_ip=$(get_domain_ip $DOMAIN $guest_interface)
 
-  for rule in $(iptables -t nat -L PREROUTING --line-numbers | grep $guest_ip | awk '{ print $1 }'); do
+  for rule in $(iptables -t nat -L PREROUTING --line-numbers | grep $guest_ip | awk '{ print $1 }' | sort -nr); do
     iptables -t nat -D PREROUTING $rule
   done
 
-  for rule in $(iptables -L FORWARD --line-numbers | grep $guest_ip | awk '{ print $1 }'); do
+  for rule in $(iptables -L FORWARD --line-numbers | grep $guest_ip | awk '{ print $1 }' | sort -nr); do
     iptables -D FORWARD $rule
   done
 }
