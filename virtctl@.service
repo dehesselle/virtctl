@@ -38,17 +38,18 @@ ExecStartPre=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 10 ]; do ((COUNT++));
 # Create the domain.
 ExecStart=/usr/bin/virsh create ${DOMAIN_DIR}/%i.xml
 # Provide a (optional) post-start functionality.
-ExecStartPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStartPost || :'
+ExecStartPost=-/usr/bin/timeout -k 10 60 bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStartPost || :'
 # This first ExecStop acts as substitute for the non-existing "ExecStopPre".
 # It is required because we have post-stop actions that actually need to run
 # while the domain is still running.
-ExecStop=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPre; [ "$(type -t virtctl_stoppre)" = "function" ] && virtctl_stoppre || :'
+ExecStop=-/usr/bin/timeout -k 10 60 bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPre; [ "$(type -t virtctl_stoppre)" = "function" ] && virtctl_stoppre || :'
 # Shutdown the domain gracefully by sending ACPI shutdown event.
 ExecStop=/usr/bin/bash -c 'COUNT=0; while [ $COUNT -le 45 ]; do STATE=$(virsh domstate %i 2>&1); if [ "$STATE" = "running" ]; then [ $(($COUNT % 15)) -eq 0 ] && virsh shutdown %i; ((COUNT++)); elif [ "$STATE" = "shut off" ] || [ "${STATE::27}" = "error: failed to get domain" ]; then exit 0; fi; sleep 1; done; exit 1'
 # Provide a (optional) post-stop functionality per domain.
 ExecStopPost=/usr/bin/bash -c '[ -f ${FUNCTIONS} ] && source ${FUNCTIONS} ExecStopPost || :'
-# Shutting down a domain can take some time.
-TimeoutStopSec=60
+# Set higher timeouts to allow for Exec commands to take longer.
+TimeoutStartSec=80
+TimeoutStopSec=80
 
 [Install]
 WantedBy=hypervisor.target
