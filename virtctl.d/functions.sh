@@ -34,10 +34,13 @@ function get_domain_ip
   local seconds=0
   while [ $seconds -lt 60 ]; do
     if [ $((seconds%5)) -eq 0 ]; then   # every 5 seconds
-      # get output form domifaddr command,
-      # only keep the third line (lines 1-2: header),
-      # only keep the fourth argument (ip/mask),
-      # only keep the first argument (ip)
+      # This is what happens:
+      #   - get output form domifaddr command
+      #   - only keep the third line (lines 1-2: header)
+      #   - only keep the fourth argument (ip/mask)
+      #   - only keep the first argument (ip)
+      #
+      # In case of error, domain_ip will be left empty.
       local domain_ip=$(virsh domifaddr $domain $interface |
         sed -n '3p' |
         awk '{ print $4 }' |
@@ -55,7 +58,7 @@ function get_domain_ip
 }
 
 # NAT only: forward port from host to guest
-function forward_port   # uses functions/variables from the environment
+function forward_port
 {
   local host_port=$1
   local guest_port=$2
@@ -63,9 +66,9 @@ function forward_port   # uses functions/variables from the environment
 
   local guest_ip=$(get_domain_ip $DOMAIN $guest_interface)
 
-  [ -z $host_port ] && (echo "$FUNCNAME: host_port missing" && return 1)
+  [ -z $host_port  ] && (echo "$FUNCNAME: host_port missing"  && return 1)
   [ -z $guest_port ] && (echo "$FUNCNAME: guest_port missing" && return 1)
-  [ -z $guest_ip ] && (echo "$FUNCNAME: guest_ip missing" && return 1)
+  [ -z $guest_ip   ] && (echo "$FUNCNAME: guest_ip missing"   && return 1)
 
   iptables -t nat -A PREROUTING -p tcp --dport "$host_port" -j DNAT --to "$guest_ip:$guest_port"
   iptables -I FORWARD -d "$guest_ip/32" -p tcp -m state --state NEW -m tcp --dport "$guest_port" -j ACCEPT
