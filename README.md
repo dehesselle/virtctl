@@ -36,7 +36,7 @@ In its default configuration, [virtctl](https://github.com/dehesselle/virtctl) c
 1. you adopted libvirt's directory layout and keep your domain XML in `/etc/libvirt/qemu`
 2. you kept your naming consistent, i.e. for every domain the filename `DomainName.xml` matches exactly with the real name inside the XML, `<name>DomainName</name>`.
 
-If your domain XML is somewhere else, take a look at `file_layout.conf.example` on how to override that setting with a drop-in file. The second requirement however must always be followed. 
+If your domain XML is somewhere else, take a look at `file_layout.conf.example` on how to override that setting with a drop-in file. The second requirement however must always be followed.
 
 ### Advanced
 
@@ -72,10 +72,9 @@ systemctl enable virtctl@DomainName
 systemctl set-default hypervisor
 ```
 
- 
 ## Famous last words
 
-_"It should work!"_ - I'm using this myself on a daily basis on multiple Arch Linux boxes.
+_"It should work!"_ - and I'm hoping it does for you as well. Of course I cannot guarantee for anything, but I'm using this myself on a daily basis on multiple Arch Linux boxes.
 
 ### Contributions
 
