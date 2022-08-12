@@ -53,6 +53,22 @@ Port forwardings are automatically cleared when the VM shuts down.
 [virtctl](https://github.com/dehesselle/virtctl) provides a target named `hypervisor.target`. It depends on and is reached after `multi-user.target`. If you choose to `systemctl enable virtctl@DomainName`, it gets linked into `hypervisor.target.wants`.  
 The intention is to stay clear of `multi-user.target` so that you have a way to easily enable (or disable) all VMs at once, be it temporarily with `systemctl isolate hypervisor` or permanent/on boot with `systemctl set-default hypervisor`.
 
+#### Ordering VM startup/shutdown
+
+virtctl enables defining the order of startup or shutdown for multiple VMs using systemd, e.g.:
+
+```bash
+systemctl enable virtctl@database
+systemctl enable virtctl@service
+systemctl edit virtctl@service
+```
+
+Modify the service as needed, e.g. to start "service" after "database":
+```
+[Unit]
+After=virtctl@database.service
+```
+
 ### Limitations
 
 - Multiple physical and/or virtual network adapters aren't supported.
